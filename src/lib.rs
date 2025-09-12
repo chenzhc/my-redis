@@ -7,11 +7,15 @@
 use dotenv::dotenv;
 use log::info;
 
+pub mod hello_redis;
+
+pub mod hello_server;
+
 // init log config
 pub fn init() {
     dotenv().ok();
     log4rs::init_file("log4rs.yaml", Default::default()).unwrap();
-    info!("INFO");
+    // info!("INFO");
     // let _ = env_logger::builder()
     //     .target(env_logger::Target::Stdout)
     //     .filter_level(log::LevelFilter::Trace)
@@ -19,6 +23,10 @@ pub fn init() {
     //     .try_init();
 }
 
+
+pub async fn say_world() {
+    info!("world");
+}
 
 #[cfg(test)]
 mod tests {
@@ -28,5 +36,12 @@ mod tests {
     async fn it_test_db01() {
         crate::init();
         info!("This is an info message from the test.");
+
+        let op = say_world();
+
+        info!("hello");
+
+        op.await;
+
     }
 }
