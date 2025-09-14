@@ -11,6 +11,8 @@ pub mod hello_redis;
 
 pub mod hello_server;
 
+pub mod async_test;
+
 // init log config
 pub fn init() {
     dotenv().ok();
