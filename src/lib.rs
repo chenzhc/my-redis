@@ -17,6 +17,8 @@ pub mod cmd_test;
 
 pub mod csv_test;
 
+pub mod regex_test;
+
 // init log config
 pub fn init() {
     dotenv().ok();
