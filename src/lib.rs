@@ -15,6 +15,8 @@ pub mod async_test;
 
 pub mod cmd_test;
 
+pub mod csv_test;
+
 // init log config
 pub fn init() {
     dotenv().ok();
