@@ -13,6 +13,12 @@ pub mod hello_server;
 
 pub mod async_test;
 
+pub mod cmd_test;
+
+pub mod csv_test;
+
+pub mod regex_test;
+
 // init log config
 pub fn init() {
     dotenv().ok();
