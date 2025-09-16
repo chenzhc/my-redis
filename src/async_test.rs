@@ -191,13 +191,77 @@ impl Person {
     }
 }
 
+pub fn longest<'a>(x: &'a str, y: &'a str) -> &'a str {
+    if x.len() > y.len() {
+        return x;
+    } else {
+        return y;
+    }
+}
+
+
+pub fn longest2(_x: &str, _y: &str) -> String {
+    String::from("really long string")
+
+}
+
+#[derive(Debug)]
+struct ImportantExcerpt<'a> {
+    part: &'a str,
+}
+
 #[cfg(test)]
 mod tests {
-    use std::{backtrace, rc::Rc, time::Duration};
+    use std::{backtrace, collections::HashMap, fs::File, rc::Rc, time::Duration};
     use futures::{join, pin_mut, select, FutureExt};
     use log::info;
     use tokio::time;
     use super::*;
+
+    #[test]
+    fn it_longest_test() {
+        crate::init();
+        let string1 = String::from("abcd");
+        let string2 = "xyz";
+
+        let result = longest(string1.as_str(), string2);
+        info!("The longest string is {}", result);
+
+        let s = longest2("not", "important");
+        info!("{}", s);
+
+        let novel = String::from("Call me Ishmael. Some years ago...");
+        let first_sentence = novel.split('.').next().expect("Could not find a '.'");
+        let i = ImportantExcerpt {
+            part: first_sentence,
+        };
+
+        info!("{:?}", i);
+
+        let f = File::open("hello.txt");
+
+        let f = match f {
+            Ok(file) => file,
+            Err(error) => {
+                panic!("Problem opening the file: {:?}", error);
+            },
+        };
+        
+    }
+
+    #[test]
+    fn it_test_hash_map() {
+        crate::init();
+        let text = "hello world wonderful world";
+
+        let mut map = HashMap::new();
+        for word in text.split_whitespace() {
+            let count = map.entry(word).or_insert(10);
+            *count += 1;
+        }
+        info!("{:?}", map);
+
+    }
 
     #[test]
     fn it_person_test() {
@@ -212,6 +276,54 @@ mod tests {
         // people.sort_unstable_by(|a, b| b.age.cmp(&a.age));
         people.sort_unstable();
         info!("{:?}", people);
+
+        let mut my_gems = HashMap::new();
+        my_gems.insert("红宝石", 1);
+        my_gems.insert("蓝宝石", 2);
+        my_gems.insert("河边检的误以为是宝石的破石头", 18);
+        info!("{:?}", my_gems);
+
+        let teams_list = vec![
+            ("中国队".to_string(), 100),
+            ("美国队".to_string(), 10),
+            ("日本队".to_string(), 50),
+        ];
+
+        let mut teams_map = HashMap::new();
+        for team in &teams_list {
+            teams_map.insert(&team.0, team.1);
+        }
+        info!("{:?}", teams_map);
+
+        let mut scores = HashMap::new();
+        scores.insert(String::from("Blue"), 10);
+        scores.insert(String::from("Yellow"), 50);
+
+        let team_name = String::from("Blue");
+        let score: Option<&i32> = scores.get(&team_name);
+        info!("{:?}", score);
+        let score: i32 = scores.get(&team_name).copied().unwrap_or(0);
+        info!("{}", score);
+
+        for (key, value) in &scores {
+            info!("{} : {}", key, value );
+        }
+
+        let mut scores = HashMap::new();
+        scores.insert("Blue", 10);
+
+        let old = scores.insert("Blue", 20);
+        info!("old: {:?}", old);
+
+        let new = scores.get("Blue");
+        info!("new: {:?}",new);
+
+        let v = scores.entry("Yellow").or_insert(5);
+        info!("v: {}", *v);
+
+        let v = scores.entry("Yellow").or_insert(50);
+        info!("v: {:?}", *v);
+
 
     }
 
