@@ -77,6 +77,21 @@ impl Future for F1Racer {
     }
 }
 
+pub fn takes_ownership(some_thing: String) {
+    info!("{:p}, {}", &some_thing, some_thing);
+}
+
+pub fn makes_copy(some_thing: i32) {
+    info!("{}", some_thing);
+}
+
+pub fn calculate_length(s: &String) -> usize {
+    return s.len();
+}
+
+pub fn change(some_string: &mut String) {
+    some_string.push_str(", world");
+}
 
 #[cfg(test)]
 mod tests {
@@ -85,6 +100,78 @@ mod tests {
     use log::info;
     use tokio::time;
     use super::*;
+
+    #[test]
+    fn it_test03() {
+        crate::init();
+        let s = String::from("hello");
+        info!("{:p}", &s);
+        takes_ownership(s);
+
+        let x = 5;
+        makes_copy(x);
+        info!("{}", x);
+
+        let x = 5;
+        let y = &x;
+        info!("{}", x);
+        info!("{}", *y);
+
+        let s1 = String::from("hello");
+        let len = calculate_length(&s1);
+        info!("The length of '{}' is {}.", s1, len);
+        
+        let mut s = String::from("hello");
+        change(&mut s);
+        info!("{}", s);
+
+        let string_append = String::from("hello ");
+        let string_rust = String::from("rust");
+        let result = string_append + &string_rust;
+        let mut result = result + "!";
+        result += "!!!";
+        info!("{}", result);
+
+        let s1 = String::from("tic");
+        let s2 = String::from("tac");
+        let s3 = String::from("toe");
+        let s = s1 + "-" + &s2 + "-" + &s3;
+        info!("{}", s);
+
+        let s1 = "hello";
+        let s2 = String::from("rust");
+        let s = format!("{} {}!", s1, s2);
+        info!("{}", s);
+
+        for c in "中国人".chars() {
+            info!("{}", c);
+        }
+
+    }
+
+    #[test]
+    fn it_test02() {
+        crate::init();
+        let x = (-42.0_f32).sqrt();
+        if x.is_nan() {
+            info!("未定义的数字行为");
+        }
+
+        for i in 1..5 {
+            info!("{}", i);
+        }
+
+        let x = '中';
+        info!("点用内存大小: {}", size_of_val(&x));
+
+        let s1 = String::from("hello");
+        let s2 = s1.clone();
+        info!("s1 = {}, s2 = {}",s1, s2 );
+        info!("s1 = {}", size_of_val(&s1));
+        info!("{}", s1.capacity());
+        info!("{}", s1.len());
+
+    }
 
     #[tokio::test(flavor="multi_thread")]
     async fn test_f1racer_test() {
