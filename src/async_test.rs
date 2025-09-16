@@ -151,6 +151,46 @@ impl fmt::Display for Point {
     }
 }
 
+#[derive(Debug)]
+enum IpAddr {
+    V4(String),
+    V6(String),
+}
+
+fn show_addr(ip: IpAddr) {
+    info!("{:?}", ip);
+}
+
+trait IpAddr2 {
+    fn display(&self);
+}
+
+pub struct V4(String);
+impl IpAddr2 for V4 {
+    fn display(&self) {
+        info!("ipv4: {:?}", self.0);
+    }
+}
+
+pub struct V6(String);
+impl IpAddr2 for V6 {
+    fn display(&self) {
+        info!("ipv6: {:?}", self.0);
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct Person {
+    name: String,
+    age: u32,
+}
+
+impl Person {
+    fn new(name: String, age: u32) -> Person {
+        return Person { name, age };
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::{backtrace, rc::Rc, time::Duration};
@@ -158,6 +198,100 @@ mod tests {
     use log::info;
     use tokio::time;
     use super::*;
+
+    #[test]
+    fn it_person_test() {
+        crate::init();
+        let mut people = vec![
+            Person::new("Zoe".to_string(), 25),
+            Person::new("Al".to_string(), 60),
+            Person::new("Al".to_string(), 30),
+            Person::new("John".to_string(), 1),
+            Person::new("John".to_string(), 25),
+        ];
+        // people.sort_unstable_by(|a, b| b.age.cmp(&a.age));
+        people.sort_unstable();
+        info!("{:?}", people);
+
+    }
+
+    #[test]
+    fn it_show_ip_test() {
+        crate::init();
+        let v = vec![
+            IpAddr::V4("127.0.0.1".to_string()),
+            IpAddr::V6("::1".to_string()),
+        ];
+
+        for ip in v {
+            show_addr(ip);
+        }
+
+        let v: Vec<Box<dyn IpAddr2>> = vec![
+            Box::new(V4("127.0.0.1".to_string())),
+            Box::new(V6("::1".to_string())),
+        ];
+
+        for ip in v {
+            ip.display();
+        }
+
+        let v = vec![0; 3];
+        info!("{:?}", v);
+        let v_from = Vec::from([0,0,0]);
+        info!("{:?}", v_from);
+
+        let mut v = Vec::with_capacity(10);
+        v.extend([1,2,3]);
+        info!("Vector 长度是: {}, 容量是: {}", v.len(), v.capacity());
+
+        v.reserve(100);
+        info!("Vector (reserve) 长度是: {}, 容量是: {}",v.len(), v.capacity());
+
+        v.shrink_to_fit();
+        info!("Vector (shrink_to_fit) 长度是: {}, 容量是: {}", v.len(), v.capacity());
+
+        let mut v = vec![1,2];
+        info!("{}", v.is_empty());
+
+        v.insert(2, 3);
+        info!("{:?}", v);
+        info!("{}", v.remove(1));
+        info!("{}", v.pop().unwrap());
+        info!("{:?}", v.pop());
+        info!("{:?}", v.pop());
+        v.clear();
+        info!("{:?}", v);
+
+        let mut v1 = [11,22].to_vec();
+        v.append(&mut v1);
+        info!("{:?}", v);
+        v.truncate(1);
+        info!("{:?}", v);
+        v.retain(|x| *x > 10);
+        info!("{:?}", v);
+
+        let mut v = vec![11,22,33,44,55];
+        let mut m: Vec<_> = v.drain(1..=3).collect();
+        info!("{:?}", m);
+
+        let v2 = m.split_off(1);
+        info!("{:?}", v2);
+
+        let v = vec![11,22,33,44,55];
+        let slice = &v[1..=3];
+        info!("{:?}", slice);
+
+        let mut vec = vec![1,5,10,2,15];
+        vec.sort_unstable();
+        info!("{:?}", vec);
+
+        let mut vec = vec![1.0, 5.6, 10.3, 2.0, 15f32];
+        vec.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
+        info!("{:?}", vec);
+
+
+    }
 
     #[test]
     fn it_human_test() {
@@ -173,6 +307,40 @@ mod tests {
 
         let p1 = Point { x: 10, y: 20 };
         info!("{}", p1.to_string());
+
+        let mut v  = Vec::new();
+        v.push(1);
+        info!("{:?}", v);
+
+        let v = vec![1,2,3];
+        info!("{:?}", v);
+
+        let third = &v[2];
+        info!("第三个元素是 {}", third);
+
+        match v.get(2) {
+            Some(third) => info!("第三个元素是: {}", third),
+            None => info!("根本没有!"),
+        }
+
+        let does_not_exist = v.get(100);
+        if does_not_exist.is_none() {
+            info!("not exist: 100");
+        }
+
+        let v = vec![1,2,3];
+        for i in &v {
+            info!("{}", i);
+        }
+
+        let mut v = vec![1,2,3];
+        for i in &mut v {
+            *i += 10;
+        }
+
+        for i in &v {
+            info!("{}", i);
+        }
 
     }
 
