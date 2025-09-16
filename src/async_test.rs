@@ -5,6 +5,7 @@
 #![allow(dead_code,unused_variables)]
 use dotenv::dotenv;
 use log::info;
+use core::fmt;
 use std::{future::Future, thread, time::Duration};
 
 
@@ -93,13 +94,87 @@ pub fn change(some_string: &mut String) {
     some_string.push_str(", world");
 }
 
+pub trait Pilot {
+    fn fly(&self);
+} 
+
+pub trait Wizard {
+    fn fly(&self);
+}
+
+struct Human;
+
+impl Pilot for Human {
+    fn fly(&self) {
+        info!("This is your caption speaking.");
+    }
+}
+
+impl Wizard for Human {
+    fn fly(&self) {
+        info!("Up!");
+    }
+}
+
+impl Human {
+    fn fly(&self) {
+        info!("*waving arms furiously*");
+    }
+}
+
+trait Animal {
+    fn baby_name() -> String;
+}
+
+struct Dog;
+
+impl Dog {
+    fn baby_name() -> String {
+        String::from("Sport")
+    }
+}
+
+impl Animal for Dog {
+    fn baby_name() -> String {
+        String::from("puppy")
+    }
+}
+
+struct Point {
+    x: i32,
+    y: i32,
+}
+
+impl fmt::Display for Point {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}, {})", self.x, self.y)
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use std::{rc::Rc, time::Duration};
+    use std::{backtrace, rc::Rc, time::Duration};
     use futures::{join, pin_mut, select, FutureExt};
     use log::info;
     use tokio::time;
     use super::*;
+
+    #[test]
+    fn it_human_test() {
+        crate::init();
+        let person = Human;
+        Pilot::fly(&person);
+        Wizard::fly(&person);
+        person.fly();
+
+        info!("A baby dog is called a {}", Dog::baby_name());
+        info!("A baby dog is called a {}", <Dog as Animal>::baby_name());
+        info!("{}", "=".repeat(10));
+
+        let p1 = Point { x: 10, y: 20 };
+        info!("{}", p1.to_string());
+
+    }
 
     #[test]
     fn it_test03() {
