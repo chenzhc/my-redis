@@ -6,7 +6,7 @@
 use dotenv::dotenv;
 use log::info;
 use core::fmt;
-use std::{future::Future, thread, time::Duration};
+use std::{fmt::{Debug, Display}, future::Future, slice::from_raw_parts, str::from_utf8_unchecked, thread, time::Duration};
 
 
 pub async fn get_number() -> u8 {
@@ -140,6 +140,7 @@ impl Animal for Dog {
     }
 }
 
+#[derive(Debug)]
 struct Point {
     x: i32,
     y: i32,
@@ -210,6 +211,79 @@ struct ImportantExcerpt<'a> {
     part: &'a str,
 }
 
+impl Point {
+    fn move_to(&mut self, x: i32, y: i32) {
+        self.x = x;
+        self.y = y;
+    }
+}
+
+struct Interface<'b, 'a: 'b> {
+    manager: &'b mut Manager<'a>
+}
+
+impl<'b, 'a: 'b> Interface<'b,'a> {
+    pub fn noop(self) {
+        info!("interface consumed");
+    }
+}
+
+struct Manager<'a> {
+    text: &'a str,
+}
+
+struct List<'a> {
+    manager: Manager<'a>,
+}
+
+impl<'a> List<'a> {
+    pub fn get_interface<'b>(&'b mut self) -> Interface<'b, 'a> 
+        where 'a: 'b     
+    {
+        Interface { manager: &mut self.manager }
+    }
+}
+
+fn use_list(list: &List) {
+    info!("{}", list.manager.text);
+}
+
+fn print_author(author: &'static str) {
+    info!("{}", author);
+}
+
+fn print<T>(message: &T) 
+    where T: Display + 'static
+{
+    info!("{}", message);
+}
+
+fn get_memory_location() -> (usize, usize) {
+    let string = "Hello world!";
+    let pointer = string.as_ptr() as usize;
+    let length = string.len();
+
+    return (pointer, length);
+}
+
+fn get_str_at_location(pointer: usize, length: usize) -> &'static str {
+    unsafe  {
+        from_utf8_unchecked(from_raw_parts(pointer as *const u8, length))
+    }
+}
+
+fn print_it<T>(input: &T) 
+    where T: Debug + 'static
+{
+    info!("'static value passed in is: {:?}", input);
+}
+
+fn static_bound<T>(t: &T) 
+    where T: Display + 'static
+{
+    info!("{}", t);
+}
+
 #[cfg(test)]
 mod tests {
     use std::{backtrace, collections::HashMap, fs::File, rc::Rc, time::Duration};
@@ -217,6 +291,73 @@ mod tests {
     use log::info;
     use tokio::time;
     use super::*;
+
+    #[test]
+    fn it_static_input_test() {
+        crate::init();
+        let i = 5;
+        print_it(&i);
+
+        let r1;
+        let r2;
+        {
+            static STATIC_EXAMPLE: i32 = 42;
+            r1 = &STATIC_EXAMPLE;
+            let x = "&'static str";
+            r2 = x;
+        }
+        info!("&'static i32: {}", r1);
+        info!("&'static str: {}", r2);
+
+        let x = 1;
+        let sum = |y| x+y;
+
+        info!("{}", sum(2));
+        
+      
+    }
+
+    #[test]
+    fn it_null_test01() {
+        crate::init();
+
+        let mut s = String::from("hello");
+        let r1 = &s;
+        let r2 = &s;
+        info!("{} and {}", r1, r2);
+        let r3 = &mut s;
+        info!("{}", r3);
+
+
+        let mut  p = Point {x: 0, y:0};
+        let r = &mut p;
+        let rr: &Point = &*r;
+        info!("{:?}", rr);
+
+        r.move_to(10, 10);
+        info!("{:?}", r);
+
+        let mut list = List {
+            manager: Manager { text: "hello" }
+        };
+
+        list.get_interface().noop();
+
+        info!("Interface should be dropped here and the borrow released");
+
+        use_list(&list);
+
+        let mark_twain: &'static str = "Samuel Clemens";
+        print_author(mark_twain);
+        print(&mark_twain);
+
+        let (pointer, length) = get_memory_location();
+        let message = get_str_at_location(pointer, length);
+        info!("The {} bytes at 0x{:X} stored: {}",
+            length, pointer, message
+        );
+
+    }
 
     #[test]
     fn it_longest_test() {
