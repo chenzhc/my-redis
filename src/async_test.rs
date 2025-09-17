@@ -5,8 +5,9 @@
 #![allow(dead_code,unused_variables)]
 use dotenv::dotenv;
 use log::info;
+use num_derive::FromPrimitive;
 use core::fmt;
-use std::{fmt::{Debug, Display}, future::Future, slice::from_raw_parts, str::from_utf8_unchecked, thread, time::Duration};
+use std::{fmt::{Debug, Display}, future::Future, ops::{Add, Deref, DerefMut}, slice::from_raw_parts, str::from_utf8_unchecked, thread, time::Duration};
 
 
 pub async fn get_number() -> u8 {
@@ -370,6 +371,163 @@ fn sum_iter(x: &[f64]) -> f64 {
     x.iter().sum::<f64>()
 }
 
+struct Wrapper(Vec<String>);
+
+impl fmt::Display for Wrapper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{}]", self.0.join(", "))
+    }
+}
+
+struct Meters(u32);
+impl fmt::Display for Meters {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "目标地点距离你{}米", self.0)
+    }
+}
+
+impl Add for Meters {
+    type Output = Self;
+    fn add(self, other: Self) -> Self::Output {
+        Self(self.0 +  other.0)
+    }
+}
+
+fn calculate_distance(d1: Meters, d2: Meters) -> Meters {
+    d1 + d2 
+}
+
+#[derive(FromPrimitive)]
+enum MyEnum {
+    A = 1,
+    B,
+    C,
+}
+
+impl TryFrom<i32> for MyEnum {
+    type Error = ();
+    fn try_from(v: i32) -> Result<Self, Self::Error> {
+        match v {
+            x if x == MyEnum::A as i32 => Ok(MyEnum::A),
+            x if x == MyEnum::B as i32 => Ok(MyEnum::B),
+            x if x == MyEnum::C as i32 => Ok(MyEnum::C),
+            _ => Err(()),
+        }
+    }
+}
+
+fn foo(x: &str) -> String {
+    let a = "Hello, ".to_string() + x;
+    a
+}
+
+trait Draw {
+    fn draw(&self);
+}
+
+struct Button {
+    id: u32,
+}
+impl Draw for Button {
+    fn draw(&self) {
+        info!("这是屏幕上第{}号按钮", self.id);
+    }
+}
+
+struct Select {
+    id: u32,
+}
+impl Draw for Select {
+    fn draw(&self) {
+        info!("这个选择框贼难用{}", self.id);
+    }
+}
+
+fn gen_static_str() -> &'static str {
+    let mut s = String::new();
+    s.push_str("hello, world");
+
+    Box::leak(s.into_boxed_str())
+}
+
+#[derive(Debug)]
+struct MyBox<T>(T);
+impl<T> MyBox<T> {
+    fn new(x: T) -> MyBox<T> {
+        MyBox(x)
+    }
+}
+
+// 解引用
+impl<T> Deref for MyBox<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+fn display(s: &str) {
+    info!("{}", s);
+}
+
+struct MyBox2<T> {
+    v: T,
+}
+impl<T> MyBox2<T> {
+    fn new(x: T) -> MyBox2<T> {
+        MyBox2 { v: x}
+    }
+}
+
+impl<T> Deref for MyBox2<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.v
+    }
+}
+
+impl<T> DerefMut for MyBox2<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.v
+    }
+}
+
+fn display2(s: &mut String) {
+    s.push_str("world");
+    info!("{}", s);
+}
+
+struct HasDrop1;
+struct HasDrop2;
+impl Drop for HasDrop1 {
+    fn drop(&mut self) {
+        info!("Dropping HasDrop1!");
+    }
+}
+impl Drop for HasDrop2 {
+    fn drop(&mut self) {
+        info!("Dropping HasDrop2!");
+    }
+}
+struct HasTwoDrops {
+    one: HasDrop1,
+    two: HasDrop2,
+}
+impl Drop for HasTwoDrops {
+    fn drop(&mut self) {
+        info!("Dropping HasTwoDrops!");
+    }
+}
+
+struct Foo;
+impl Drop for Foo {
+    fn drop(&mut self) {
+        info!("Dropping Foo!");
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::{backtrace, collections::HashMap, fs::File, rc::Rc, time::Duration};
@@ -378,6 +536,110 @@ mod tests {
     use rand::Rng;
     use tokio::time;
     use super::*;
+
+    #[test]
+    fn it_rc_test() {
+        crate::init();
+        
+        let a = Rc::new(String::from("test ref counting"));
+        info!("count after creating a = {}", Rc::strong_count(&a));
+        let b = Rc::clone(&a);
+        info!("count after creating b = {}", Rc::strong_count(&b));
+        {
+            let c = Rc::clone(&a);
+            info!("count after creating c = {}", Rc::strong_count(&c));
+        }
+        info!("count after c goes out of scope = {}", Rc::strong_count(&a));
+    }
+
+    #[test]
+    fn it_my_box_test() {
+        crate::init();
+        let x = MyBox::new(5);
+        info!("{:?}", x);
+        info!("{}", *x);
+
+        let s = String::from("hello world!");
+        display(&s);
+
+        let s = MyBox::new(String::from("Hello world"));
+        display(&s);
+        let s1: &str = &s;
+        let s2: String = s.to_string();
+        info!("{}", s1);
+        info!("{}", s2);
+
+        let  mut s = MyBox2::new(String::from("hello, "));
+        display2(&mut s);
+
+        let _x = HasTwoDrops {
+            one: HasDrop1,
+            two: HasDrop2,
+        };
+        let foo = Foo;
+        drop(foo);        
+        info!("Running!");
+
+        let a = Rc::new(String::from("hello,world"));
+        let b = Rc::clone(&a);
+        info!("{}", Rc::strong_count(&a));
+        info!("{}", Rc::strong_count(&b));
+
+
+
+
+    }
+
+    #[test]
+    fn it_try_from_test() {
+        crate::init();
+        let x = MyEnum::C as i32;
+
+        match x.try_into() {
+            Ok(MyEnum::A) => info!("a"),
+            Ok(MyEnum::B) => info!("b"),
+            Ok(MyEnum::C) => info!("c"),
+            Err(_) => info!("unknow number"),
+        }
+
+        let b = foo("world");
+        info!("{}", b);
+
+        let a = Box::new(3);
+        info!("a = {:p}", a.as_ref());
+
+        let arr = Box::new([0; 1000]);
+        let arr1 = arr;
+        info!("{}",arr1.len());
+
+        let elemes: Vec<Box<dyn Draw>> = vec![
+            Box::new(Button { id: 1}),
+            Box::new(Select{id: 2})
+        ];
+
+        for e in elemes {
+            e.draw();
+        }
+
+        let arr = vec![Box::new(1), Box::new(2)];
+        let (first, second) = (&arr[0], &arr[1]);
+        let sum = **first + **second;
+        info!("sum = {}", sum);
+        info!("first = {:?}", **first);
+
+        let s = gen_static_str();
+        info!("{}", s);
+
+        let x = 5;
+        let y = &x;
+
+        info!("{}", *y);
+
+        let x = Box::new(1);
+        info!("{}", *x);
+
+
+    }
 
 
     #[test]
@@ -408,6 +670,55 @@ mod tests {
 
         let a = i8::MAX;
         info!("{}", a);
+
+        let a = 3.1 as i8;
+        let b = 100_i8 as i32;
+        let c = 'a' as u8;
+        info!("{}, {}, {}", a, b, c);
+
+        let mut values = [1,2];
+        let p1 = values.as_mut_ptr();
+        info!("{:p}", p1);
+        let first_address = p1 as usize;
+        info!("{}", first_address);
+        let second_address = first_address + 4;
+        info!("{}", second_address);
+        let p2 = second_address as *mut i32;
+        unsafe  {
+            *p2 += 1;
+        }
+
+        info!("{}", values[1]);
+
+
+        let a: u8 = 10;
+        let b: u16 = 1500;
+        // let b_: u8 = b.try_into().unwrap();
+
+        let w = Wrapper(vec![
+            String::from("hello"),
+            String::from("world")
+        ]);
+        info!("w = {}", w);
+
+        let d = calculate_distance(Meters(10), Meters(20));
+        info!("{}", d);
+
+
+        type Meters = u32;
+        let x: u32 = 5;
+        let y: Meters = 5;
+        info!("x + y = {}", x + y);
+
+        let x = 2;
+        match num_traits::FromPrimitive::from_i32(x) {
+            Some(MyEnum::A) => {
+                info!("Got A");
+            },
+            Some(MyEnum::B) => info!("Got B"),
+            Some(MyEnum::C) => info!("Got C"),
+            None => info!("Couldn't convert {}", x),
+        }
 
     }
 
