@@ -284,13 +284,213 @@ fn static_bound<T>(t: &T)
     info!("{}", t);
 }
 
+fn muuuu(intensity: u32) -> u32 {
+    info!("muuuuuuu....");
+    thread::sleep(Duration::from_secs(2));
+    intensity
+}
+
+fn workout(intensity: u32, random_number: u32) {
+    let action = || {
+        info!("muuuuuuu....");
+        thread::sleep(Duration::from_secs(2));
+        intensity
+    };
+    if intensity < 25 {
+        info!("今天活力满满, 先做 {} 个俯卧撑!", action());
+        info!("旁边有妹子在看, {}", action());
+    } else if random_number == 3 {
+        info!("休息一下");
+    } else {
+        info!("{}", action());
+    }
+}
+
+fn fn_one<F>(func: F) 
+    where F: FnOnce(usize) -> bool + Copy,
+{
+    info!("{}", func(3));
+    info!("{}", func(4));
+}
+
+fn exec<'a, F: FnMut(&'a str)>(mut f: F) {
+    f("hello")
+}
+
+fn exec2<'a, F: Fn(String) -> ()>(f: F) {
+    f("world".to_string())
+}
+
+fn exec1<F: FnOnce()>(f: F) {
+    f()
+}
+
+fn exec22<F: FnMut()>(mut f: F) {
+    f()
+}
+
+fn exec3<F: Fn()>(f: F) {
+    f()
+}
+
+struct Counter {
+    count: u32,
+}
+
+impl Counter {
+    fn new() -> Counter {
+        Counter {
+            count: 0
+        }
+    }
+}
+
+impl Iterator for Counter {
+    type Item = u32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.count < 5 {
+            self.count += 1;
+            Some(self.count)
+        } else {
+            None
+        }
+    }
+}
+
+fn sum_for(x: &[f64]) -> f64 {
+    let mut result: f64 = 0.0;
+    for i in 0..x.len() {
+        result += x[i];
+    }
+    result
+}
+
+fn sum_iter(x: &[f64]) -> f64 {
+    x.iter().sum::<f64>()
+}
+
 #[cfg(test)]
 mod tests {
     use std::{backtrace, collections::HashMap, fs::File, rc::Rc, time::Duration};
     use futures::{join, pin_mut, select, FutureExt};
     use log::info;
+    use rand::Rng;
     use tokio::time;
     use super::*;
+
+
+    #[test]
+    fn it_next_test() {
+        crate::init();
+        let mut counter = Counter::new();
+        info!("{:?}", counter.next());
+        info!("{:?}", counter.next());
+        info!("{:?}", counter.next());
+        info!("{:?}", counter.next());
+        info!("{:?}", counter.next());
+        info!("{:?}", counter.next());
+
+        let sum: u32 = Counter::new()
+            .zip(Counter::new().skip(1))
+            .map(|(a,b)| a * b)
+            .filter(|x| x % 3 == 0)
+            .sum();
+        info!("{}", sum);
+
+        let v = vec![1u64, 2,3,4,5,6];
+        let val = v.iter()
+            .enumerate()
+            .filter(|&(idx, _)| idx % 2 == 0)
+            .map(|(_, val)| val)
+            .fold(0u64, |sum, acm| sum + acm);
+        info!("{}", val);
+
+        let a = i8::MAX;
+        info!("{}", a);
+
+    }
+
+    #[test]
+    fn it_sum_test() {
+        crate::init();
+
+        let sum = |x: i32, y: i32| -> i32 {
+            x + y
+        };
+
+        info!("{}", sum(1,2));
+        let x = vec![1,2,3];
+        fn_one(|z| { z == x.len()});
+
+        let v = vec![1,2,3];
+        let handle = thread::spawn(move || {
+            info!("Here's a vector: {:?}", v);
+        });
+        handle.join().unwrap();
+
+        let mut s =  String::new();
+        let update_string = |str| s.push_str(str);
+
+        exec(update_string);
+        info!("{:?}", s);
+
+        let s = "hello, ".to_string();
+        let update_string = |str| info!("{},{}", s, str);
+        exec2(update_string);
+        info!("{:?}", s);
+
+        let s = String::new();
+        let update_string = || info!("{}", s);
+
+        exec1(update_string);
+        exec22(update_string);
+        exec3(update_string);
+
+        let arr = [1,2,3];
+        for v in arr {
+            info!("{}", v);
+        }
+
+        for i in 1..10 {
+            info!("{}", i);
+        }
+
+        let arr = [1,2,3];
+        for v in arr.into_iter() {
+            info!("{}", v);
+        }
+
+        info!("{}", "=".repeat(20));
+        let values = vec![1,2,3];
+        for v in values.into_iter().into_iter().into_iter() {
+            info!("{}", v);
+        }
+
+        let values = vec![1,2,3];
+        for v in values.into_iter() {
+            info!("{}", v);
+        }
+
+        let values = vec![1,2,3];
+        let _values_iter = values.iter();
+
+        info!("{:?}", values);
+
+        let mut values = vec![1,2,3];
+        let mut values_iter_mut = values.iter_mut();
+        if let Some(v) = values_iter_mut.next() {
+            *v = 0;
+        }
+
+        info!("{:?}", values);
+
+        let names: [&'static str; 2] = ["sunface", "sunfei"];
+        let ages = [18,19];
+        let folks: HashMap<_, _> = names.into_iter().zip(ages.into_iter()).collect();
+        info!("{:?}", folks);
+
+    }
 
     #[test]
     fn it_static_input_test() {
@@ -313,7 +513,10 @@ mod tests {
         let sum = |y| x+y;
 
         info!("{}", sum(2));
-        
+
+        let intensity = 10;
+        let random_number = 7;
+        workout(intensity, random_number);
       
     }
 

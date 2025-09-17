@@ -847,6 +847,7 @@ dependencies = [
  "log4rs",
  "mini-redis",
  "once_cell",
+ "rand",
  "regex",
  "serde",
  "serde_json",
