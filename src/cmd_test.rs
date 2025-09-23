@@ -3,7 +3,18 @@
 )]
 #![allow(dead_code,unused_variables)]
 
+use bytes::Bytes;
 
+#[derive(Debug)]
+pub enum Command {
+    Get {
+        key: String,
+    },
+    Set {
+        key: String,
+        val: Bytes,
+    }
+}
 
 #[cfg(test)]
 mod tests {
