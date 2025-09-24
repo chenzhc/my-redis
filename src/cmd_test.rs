@@ -3,8 +3,11 @@
 )]
 #![allow(dead_code,unused_variables)]
 
+use std::{task::Poll, thread, time::Instant};
+
 use bytes::Bytes;
-use tokio::sync::oneshot;
+use log::info;
+use tokio::{io::{AsyncReadExt, AsyncWriteExt}, sync::oneshot};
 
 type Responder<T> = oneshot::Sender<mini_redis::Result<T>>;
 
@@ -92,5 +95,54 @@ mod tests {
         }
 
         
+    }
+}
+
+
+pub async fn handle_client(mut socket: tokio::net::TcpStream) -> Result<(), Box<dyn std::error::Error>> { 
+    let mut buffer = [0; 1024];
+
+    // Read message from client
+    let len = socket.read(&mut buffer).await?;
+    if len == 0 {
+        return Ok(());
+    }
+
+    let message = std::str::from_utf8(&buffer[..len])?;
+    info!("Received from client: {}", message);
+
+    // Send response to client
+    let response = "Hello from server!";
+    socket.write_all(response.as_bytes()).await?;
+
+    Ok(())
+}
+
+pub struct Delay {
+    pub when: Instant,
+}
+
+impl Future for Delay {
+    type Output = &'static str;
+
+    fn poll(self: std::pin::Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> std::task::Poll<Self::Output> {
+        if Instant::now() >= self.when {
+            info!("Hello world");
+            Poll::Ready("done")
+        } else {
+            let waker = cx.waker().clone();
+            let when  = self.when;
+
+            thread::spawn(move || {
+                let now = Instant::now();
+
+                if now < when {
+                    thread::sleep(when - now);
+                }
+                waker.wake();
+            });
+            
+            Poll::Pending
+        }
     }
 }

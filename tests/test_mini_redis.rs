@@ -5,11 +5,15 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+use std::time::{Duration, Instant};
+
+use bytes::buf;
+use futures::io;
 use log::info;
 use mini_redis::{client, Result};
-use my_redis::{cmd_test::Command, init};
+use my_redis::{cmd_test::{handle_client, Command, Delay}, init};
 use serde_json::map::Keys;
-use tokio::{net::TcpListener, sync::oneshot};
+use tokio::{fs::File, io::{AsyncReadExt, AsyncWriteExt}, net::TcpListener, sync::oneshot};
 
 type Responder<T> = oneshot::Sender<mini_redis::Result<T>>;
 
@@ -82,3 +86,88 @@ async fn it_reids_client_test02() {
     
 }
 
+
+#[tokio::test]
+async fn it_async_read_file_test() -> anyhow::Result<()> {
+    init();
+    let mut f = File::open("foo.txt").await?;
+    let mut buffer = [0; 10];
+
+    let n = f.read(&mut buffer[..]).await?;
+
+    info!("The bytes: {:?}", &buffer[..n]);
+    Ok(())
+}
+
+#[tokio::test]
+async fn it_async_file_test02() -> anyhow::Result<()>{
+    init();
+    let mut f = File::open("foo.txt").await?;
+    let mut buffer = Vec::new();
+
+    f.read_to_end(&mut buffer).await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn it_async_write_file_test01() -> anyhow::Result<()> {
+    init();
+    let mut file = File::create("foo.txt").await?;
+
+    let n = file.write(b"some bytes").await?;
+
+    info!("Wrote the first {} bytes of 'some bytes'.", n);
+    Ok(())
+}
+
+#[tokio::test]
+async fn it_async_write_file_test02() -> anyhow::Result<()> {
+    init();
+    let mut file = File::create("foo.txt").await?;
+
+    file.write_all(b"some text bytes").await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn it_async_cp_file_test01() -> anyhow::Result<()> {
+    init();
+    let mut reader: &[u8] = b"hello";
+    let mut file = File::create("foo.txt").await?;
+
+    tokio::io::copy(&mut reader, &mut file).await?;
+
+    Ok(())
+}
+
+
+#[tokio::test]
+async fn it_tcp_copy_server_test() -> anyhow::Result<()> {
+    init();
+    let mut data = [0u8; 12];
+    let listener = TcpListener::bind("0.0.0.0:6142").await?;
+    info!("Server listening on 0.0.0.0:6142");
+
+    loop {
+        let (socket, _) = listener.accept().await?;
+        tokio::spawn(async move {
+            let _ = handle_client(socket).await;
+        });
+    }
+}
+
+
+#[tokio::test]
+async fn it_delay_test01() {
+    init();
+    let when = Instant::now() + Duration::from_millis(10);
+    let future = Delay {
+        when
+    };
+
+    let out = future.await;
+
+    info!("{}", out);
+}
