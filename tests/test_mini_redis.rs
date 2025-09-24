@@ -6,9 +6,12 @@
 #![allow(unused_variables)]
 
 use log::info;
-use mini_redis::{client, Command, Result};
-use my_redis::init;
-use tokio::net::TcpListener;
+use mini_redis::{client, Result};
+use my_redis::{cmd_test::Command, init};
+use serde_json::map::Keys;
+use tokio::{net::TcpListener, sync::oneshot};
+
+type Responder<T> = oneshot::Sender<mini_redis::Result<T>>;
 
 #[tokio::test]
 async fn it_redis_client_test() -> Result<()> {
@@ -36,31 +39,41 @@ async fn it_reids_client_test02() {
             use my_redis::cmd_test::Command::*;
 
             match cmd {
-                Get { key } => {
-                    let _ = client.get(&key).await;
+                Get { key,resp } => {
+                    let res = client.get(&key).await;
+                    let _ = resp.send(res);
                 },
-                Set { key, val } => {
-                    let _ = client.set(&key, val).await;
+                Set { key, val, resp } => {
+                    let res = client.set(&key, val).await;
+                    let _ = resp.send(res);
                 }
             }
         }
     });
 
     let t1 = tokio::spawn(async move {
+        let (resp_tx, resp_rx) = oneshot::channel();
         let cmd = my_redis::cmd_test::Command::Get {
             key: "hello".to_string(),
+            resp: resp_tx,
         };
-
         tx.send(cmd).await.unwrap();
+        let res = resp_rx.await;
+        info!("Got = {:?}", res);
     });
 
     let t2 = tokio::spawn(async move {
+        let (resp_tx, resp_rx) = oneshot::channel();
         let cmd = my_redis::cmd_test::Command::Set { 
             key: "foo".to_string(), 
             val: "bar".into(),
+            resp: resp_tx,
         };
 
         tx2.send(cmd).await.unwrap();
+
+        let res = resp_rx.await;
+        info!("Got = {:?}", res);
     });
 
     t1.await.unwrap();
@@ -68,3 +81,4 @@ async fn it_reids_client_test02() {
     manager.await.unwrap();
     
 }
+
